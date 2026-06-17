@@ -136,7 +136,7 @@ function Bar({ ws, setWs, occupied, title, accent, onLock }: { ws: number; setWs
   const sep = <span className="mx-1 text-neutral-600">|</span>
   void sep
   return (
-    <header className="relative z-30 flex items-center gap-2 bg-transparent px-3 py-1 text-[11px] text-neutral-200">
+    <header className="topbar relative z-30 flex items-center gap-2 px-3 py-1 text-[11px] text-neutral-200">
       {/* 左: 通知 + cava波形 + アクティブ窓名(狭いと…で省略) */}
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <button onClick={() => setNotif((v) => !v)} title="通知" className="shrink-0 text-neutral-400 hover:text-neutral-100">
