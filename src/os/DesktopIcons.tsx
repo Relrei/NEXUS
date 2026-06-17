@@ -26,28 +26,19 @@ export function DesktopIcons({ items, onOpen }: { items: Shortcut[]; onOpen: (id
   const [ghost, setGhost] = useState<{ id: string; x: number; y: number } | null>(null)
   const rows = Math.max(1, Math.floor((window.innerHeight - 120) / CH))
 
-  // 初期配置: 保存が無いアイテムを空きセルへ(左列から縦に)
+  // 配置: アプリの増減(=保存IDとitemsの不一致)があれば隙間なく詰め直す。
+  // 一致している間はユーザーのドラッグ配置を保持。
   useEffect(() => {
     setGrid((g) => {
-      const next = { ...g }
-      const used = new Set(Object.values(next).map((c) => `${c.c},${c.r}`))
-      let changed = false
-      for (const it of items) {
-        if (next[it.id]) continue
-        let c = 0, r = 0
-        while (used.has(`${c},${r}`)) {
-          r++
-          if (r >= rows) {
-            r = 0
-            c++
-          }
-        }
-        next[it.id] = { c, r }
-        used.add(`${c},${r}`)
-        changed = true
-      }
-      if (changed) localStorage.setItem('nexus.icons', JSON.stringify(next))
-      return changed ? next : g
+      const ids = new Set(items.map((i) => i.id))
+      const stale = Object.keys(g).some((id) => !ids.has(id)) // 消えたアプリの残骸
+      const missing = items.some((it) => !g[it.id]) // 新規アプリ
+      if (!stale && !missing) return g
+      // items 順に左列から縦へ詰める(空欄を作らない)
+      const next: Grid = {}
+      items.forEach((it, i) => { next[it.id] = { c: Math.floor(i / rows), r: i % rows } })
+      localStorage.setItem('nexus.icons', JSON.stringify(next))
+      return next
     })
   }, [items, rows])
 
@@ -112,13 +103,16 @@ export function DesktopIcons({ items, onOpen }: { items: Shortcut[]; onOpen: (id
             }}
             onDoubleClick={() => onOpen(it.id)}
             style={{ left: pos.x, top: pos.y, width: CW - 4 }}
-            className={`absolute z-10 flex cursor-grab flex-col items-center gap-1 rounded-lg px-1 py-2 select-none hover:bg-white/10 active:cursor-grabbing ${
+            className={`absolute z-10 flex cursor-grab flex-col items-center gap-1 select-none active:cursor-grabbing ${
               ghost?.id === it.id ? 'opacity-80' : ''
             }`}
             title={`${it.name}（ダブルクリックで開く・ドラッグで移動）`}
           >
-            <Icon className="h-7 w-7 shrink-0 text-neutral-200 drop-shadow" />
-            <span className="line-clamp-2 w-full text-center text-[10px] leading-tight text-neutral-200 drop-shadow">{it.name}</span>
+            {/* アイコン = 丸みを帯びた正方形のガラスタイル */}
+            <span className="glass grid place-items-center rounded-2xl hover:brightness-125" style={{ width: 60, height: 60 }}>
+              <Icon className="ico-edge h-7 w-7 text-neutral-100" />
+            </span>
+            <span className="txt-edge line-clamp-1 w-full text-center text-[10px] leading-tight text-neutral-100">{it.name}</span>
           </button>
         )
       })}

@@ -54,6 +54,11 @@ export const IconText = ({ className }: P) => (
     <path d="M4 6h16M4 12h16M4 18h10" />
   </svg>
 )
+export const IconNotes = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+)
 export const IconTrash = ({ className }: P) => (
   <svg {...base(className)}>
     <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />

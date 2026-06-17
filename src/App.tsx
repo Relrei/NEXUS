@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { clearWallpaper, getWallpaperUrl, setWallpaper } from './db'
 import { Win, type Rect, type Wm } from './os/Win'
-import { basename, vfs } from './os/vfs'
+import { basename, useVfs, vfs } from './os/vfs'
 import { Terminal } from './os/apps/Terminal'
 import { Files } from './os/apps/Files'
 import { Editor } from './os/apps/Editor'
@@ -218,12 +218,24 @@ function Bar({ ws, setWs, occupied, title, accent, onLock }: { ws: number; setWs
   )
 }
 
+// 窓セッションの保存/復元(リロード/更新で吹き飛ばない対策)
+const SESSION_KEY = 'nexus.session'
+function loadSession(): { wins: W[]; ws: number } | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null')
+    if (s && Array.isArray(s.wins)) return s
+  } catch { /* ignore */ }
+  return null
+}
+
 export default function App() {
-  const [wins, setWins] = useState<W[]>([])
+  useVfs() // Desktopフォルダの変化をデスクトップアイコンに反映
+  const session0 = loadSession()
+  const [wins, setWins] = useState<W[]>(session0?.wins ?? [])
   const [wallpaper, setWp] = useState<string>()
   const [accent, setAccent] = useState('#d4d4d4')
   const [drawer, setDrawer] = useState(false)
-  const [ws, setWs] = useState(1)
+  const [ws, setWs] = useState(session0?.ws ?? 1)
   const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null)
   const [deskMenu, setDeskMenu] = useState<{ x: number; y: number } | null>(null)
   const longPress = useRef<number>(0)
@@ -231,20 +243,15 @@ export default function App() {
   const [size, setSize] = useState({ w: 1280, h: 720 })
   const [ratios, setRatios] = useState<number[]>([])
   const [locked, setLocked] = useState(false)
-  // PC判定: 細かいポインタ(マウス)があり、ホバー可能 = PC。フル液体ガラスを許可。
-  // 軽量優先のためモバイル/iPadは既定の軽量ガラス、PCのみ .fx を付ける。
-  const [fx, setFx] = useState(() => {
-    const pref = localStorage.getItem('nexus.fx')
-    if (pref === '0') return false
-    if (pref === '1') return true
-    return typeof window !== 'undefined' && window.matchMedia('(pointer: fine) and (hover: hover)').matches
-  })
+  // 液体ガラスは全端末で既定ON(モバイル/iPadもPCと統合)。設定トグルが唯一の制御点。
+  // 重い端末は設定で軽量(OFF)に切替可能。localStorage `nexus.fx` を尊重。
+  const [fx, setFx] = useState(() => localStorage.getItem('nexus.fx') !== '0')
   useEffect(() => {
     localStorage.setItem('nexus.fx', fx ? '1' : '0')
   }, [fx])
   const [tghost, setTghost] = useState<{ id: string; dx: number; dy: number } | null>(null)
   const [dragging, setDragging] = useState(false)
-  const z = useRef(10)
+  const z = useRef(session0 ? Math.max(10, ...session0.wins.map((w) => w.z)) : 10)
   const cascade = useRef(0)
   const mainRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef(ws)
@@ -258,11 +265,30 @@ export default function App() {
       if (u) sampleAccent(u).then(setAccent)
     })
   }, [])
+  // 窓セッションを保存(吹き飛ぶ対策)。窓が変わるたびlocalStorageへ。
+  useEffect(() => {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ wins, ws }))
+  }, [wins, ws])
+  // 起動中アプリ/窓をlogに記録(復元の手がかり)。デバウンスで頻発を抑える。
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const names = wins.filter((w) => w.state !== 'min').map((w) => w.title)
+      if (names.length) vfs.logEvent('セッション', `起動中: ${names.join(', ')}`)
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [wins])
   useEffect(() => {
     const measure = () => mainRef.current && setSize({ w: mainRef.current.clientWidth, h: mainRef.current.clientHeight })
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
+  }, [])
+  // サイト内ではブラウザ既定の右クリックメニューを抑止(アプリ独自の右クリックを使うため)。
+  // アプリの onContextMenu(独自メニュー)は別途発火するので両立する。
+  useEffect(() => {
+    const block = (e: MouseEvent) => e.preventDefault()
+    document.addEventListener('contextmenu', block)
+    return () => document.removeEventListener('contextmenu', block)
   }, [])
 
   // キーボード(デスクトップ向け。タッチ操作はそのまま動く)。
@@ -270,8 +296,11 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const el = document.activeElement
       const inField = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
-      // Ctrl+キー ショートカット(Hyprland風。standalone/全画面で確実)
-      if (e.ctrlKey && !e.metaKey && !e.altKey) {
+      // OSショートカット = Ctrl または Alt(修飾)。
+      // ブラウザのタブ内では Ctrl+数字/W/L/E/B 等が横取りされるため、Alt でも発火させる
+      // (Ctrl は全画面/PWAで有効・Alt はタブ内でも有効)。
+      const mod = (e.ctrlKey || e.altKey) && !e.metaKey
+      if (mod) {
         const k = e.key.toLowerCase()
         if (k >= '1' && k <= '9') { e.preventDefault(); setWs(Number(k)); return }
         if (k === '0') { e.preventDefault(); setWs(10); return }
@@ -298,8 +327,9 @@ export default function App() {
         setDrawer(false)
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    // capture段で受ける(ブラウザ既定より先に拾えるものは拾う)
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
   function focus(id: string) {
@@ -307,9 +337,11 @@ export default function App() {
   }
   function openApp(app: AppId, path?: string) {
     if (app === 'editor' && !path) {
+      // 空のうちはファイルを作らない(何も書かなければ保存されない)。
+      // 既存ファイル + 開いているエディタ窓のパスと衝突しない untitled 名を選ぶ。
+      const openPaths = new Set(stateRef.current.wins.filter((w) => w.app === 'editor').map((w) => w.path))
       let np = '/home/user/untitled.txt'
-      for (let i = 1; vfs.exists(np); i++) np = `/home/user/untitled-${i}.txt`
-      vfs.writeFile(np, '')
+      for (let i = 1; vfs.exists(np) || openPaths.has(np); i++) np = `/home/user/untitled-${i}.txt`
       path = np
     }
     setWins((all) => {
@@ -476,7 +508,21 @@ export default function App() {
 
         <input ref={wpInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && pickWallpaper(e.target.files[0])} />
 
-        <DesktopIcons items={APPS} onOpen={(id) => openApp(id as AppId)} />
+        <DesktopIcons
+          items={[
+            ...APPS.map((a) => ({ id: a.id as string, name: a.name, Icon: a.Icon })),
+            // Desktopフォルダの中身も画面にアイコンとして出す(画面とフォルダを一致させる)
+            ...(vfs.exists('/home/user/Desktop') ? vfs.ls('/home/user/Desktop').map((n) => {
+              const p = `/home/user/Desktop/${n}`
+              return { id: p, name: n, Icon: (vfs.isDir(p) ? IconFolder : IconText) as IconC }
+            }) : []),
+          ]}
+          onOpen={(id) => {
+            if (APPS.some((a) => a.id === id)) openApp(id as AppId)
+            else if (vfs.isDir(id)) openApp('files')
+            else openApp('editor', id)
+          }}
+        />
 
         {/* 窓 */}
         {shown.map((w) => (

@@ -50,15 +50,19 @@ export function Win({
   onTileDown: (x: number, y: number) => void
   dragOffset?: { dx: number; dy: number }
 }) {
-  const g = useRef<{ mode: 'move' | 'size'; sx: number; sy: number; ox: number; oy: number } | null>(null)
+  const g = useRef<{ mode: 'move' | 'size'; sx: number; sy: number; ox: number; oy: number; active: boolean } | null>(null)
   const movable = !tiled && win.state !== 'max'
 
   useEffect(() => {
     const move = (e: PointerEvent) => {
       const s = g.current
       if (!s) return
-      if (s.mode === 'move') onMove(s.ox + (e.clientX - s.sx), s.oy + (e.clientY - s.sy))
-      else onResize(Math.max(260, s.ox + (e.clientX - s.sx)), Math.max(150, s.oy + (e.clientY - s.sy)))
+      const dx = e.clientX - s.sx, dy = e.clientY - s.sy
+      // 閾値4px: ただのクリック(微小ジッタ)では動かさない=「クリックだけで移動」防止
+      if (!s.active && Math.hypot(dx, dy) < 4) return
+      s.active = true
+      if (s.mode === 'move') onMove(s.ox + dx, s.oy + dy)
+      else onResize(Math.max(260, s.ox + dx), Math.max(150, s.oy + dy))
     }
     const up = () => (g.current = null)
     window.addEventListener('pointermove', move)
@@ -90,7 +94,7 @@ export function Win({
     >
       <div
         onPointerDown={(e) => {
-          if (movable) g.current = { mode: 'move', sx: e.clientX, sy: e.clientY, ox: geom.x, oy: geom.y }
+          if (movable) g.current = { mode: 'move', sx: e.clientX, sy: e.clientY, ox: geom.x, oy: geom.y, active: false }
           else onTileDown(e.clientX, e.clientY)
         }}
         onDoubleClick={onMax}
@@ -123,7 +127,7 @@ export function Win({
         <div
           onPointerDown={(e) => {
             e.stopPropagation()
-            g.current = { mode: 'size', sx: e.clientX, sy: e.clientY, ox: geom.w, oy: geom.h }
+            g.current = { mode: 'size', sx: e.clientX, sy: e.clientY, ox: geom.w, oy: geom.h, active: false }
           }}
           className="absolute right-0 bottom-0 h-4 w-4 cursor-nwse-resize"
         />
