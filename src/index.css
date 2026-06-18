@@ -80,13 +80,13 @@ body {
     0 24px 64px rgba(0, 0, 0, 0.55);
 }
 
-/* ===== WebGL液体ガラス有効時(.glassgl) ===== */
-/* 窓の背景を透明にして、背後のWebGLキャンバス(屈折した壁紙)を透かす。
-   CSS blurはWebGL側がフロストを担うので外す。枠/影/エッジ光は残す。 */
+/* ===== ガラス(.glassgl) = CSS backdrop-filter 方式 ===== */
+/* WebGL屈折はこのwebview(WebKitGTK+NVIDIA)で不安定なため、軽く確実なCSSぼかしに。
+   ダークグレー+半透明(約50%)+ぼかし。文字は白+薄影で読みやすく。 */
 .glassgl .glass-win {
-  background: rgba(18, 18, 22, 0.1);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: rgba(18, 18, 21, 0.52);
+  backdrop-filter: blur(16px) saturate(115%);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
 }
 /* 文字はごく薄い影だけ(黒い縁取りは無し)。アイコンは色付きなので影を付けない。 */
 .glassgl .glass-win {
@@ -111,7 +111,8 @@ body {
    ドット間隔=アイコン(タイル)サイズに合わせる(--cell)。 */
 .grid-paper {
   --cell: 44px;
-  background-color: rgba(10, 10, 10, 0.22);
+  /* 背景の暗い塗りは外す(タイル/グラフと同じガラスを透かす=ビュー間で見た目を統一)。点だけ残す。 */
+  background-color: transparent;
   background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1.2px, transparent 1.7px);
   background-size: var(--cell) var(--cell);
   background-position: calc(var(--cell) / 2) calc(var(--cell) / 2);

@@ -1,4 +1,8 @@
 // 依存を増やさないための最小インラインSVGアイコン。stroke=currentColor。
+// フォルダ/ファイル/画像はHyprlandテーマ(Flat-Remix)のsvgをimport=単一HTML(file://)でもインラインされ自己完結。
+import folderUrl from './assets/ic-folder.svg'
+import fileUrl from './assets/ic-file.svg'
+import imageUrl from './assets/ic-image.svg'
 type P = { className?: string }
 const base = (className?: string) => ({
   className,
@@ -37,13 +41,13 @@ export const IconLink = ({ className }: P) => (
   </svg>
 )
 export const IconImage = ({ className }: P) => (
-  <img src="/icons/image.svg" className={className} alt="" draggable={false} />
+  <img src={imageUrl} className={className} alt="" draggable={false} />
 )
 export const IconFile = ({ className }: P) => (
-  <img src="/icons/file.svg" className={className} alt="" draggable={false} />
+  <img src={fileUrl} className={className} alt="" draggable={false} />
 )
 export const IconText = ({ className }: P) => (
-  <img src="/icons/file.svg" className={className} alt="" draggable={false} />
+  <img src={fileUrl} className={className} alt="" draggable={false} />
 )
 export const IconNotes = ({ className }: P) => (
   <svg {...base(className)}>
@@ -72,7 +76,7 @@ export const IconClip = ({ className }: P) => (
 )
 // フォルダ/ファイル/画像は、このマシンのHyprlandアイコンテーマ(Flat-Remix-Blue-Dark)を public/icons/ に複製して再利用。
 export const IconFolder = ({ className }: P) => (
-  <img src="/icons/folder.svg" className={className} alt="" draggable={false} />
+  <img src={folderUrl} className={className} alt="" draggable={false} />
 )
 export const IconTerminal = ({ className }: P) => (
   <svg {...base(className)}>

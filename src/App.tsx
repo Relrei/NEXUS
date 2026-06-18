@@ -519,8 +519,9 @@ export default function App() {
       )}
 
       <main ref={mainRef} className="relative min-h-0 flex-1 overflow-hidden">
-        {/* 本物の液体ガラス(WebGL屈折)。窓(.glass-win)の裏に壁紙を歪ませて描く。アイコン(z2)の上・窓(z11+)の下。 */}
-        <GlassFX wallpaper={wallpaper} active={fx && !!wallpaper} />
+        {/* WebGL屈折ガラスはこのWebKitGTK+NVIDIA環境と相性が悪い(クラッシュ/白画面/ソフト10fps)ため停止。
+            ガラスはCSS backdrop-filter(.glassgl .glass-win)で代替=軽くて確実。本物の屈折はShojiWM(実コンポジタ)の役目。 */}
+        <GlassFX wallpaper={wallpaper} active={false} />
         {/* デスクトップ操作面(右クリック/長押し)。壁紙は背面なので透明な操作レイヤーだけ置く */}
         <div
           className="absolute inset-0"

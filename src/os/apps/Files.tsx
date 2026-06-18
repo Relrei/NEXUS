@@ -131,14 +131,39 @@ export function Files({ onOpen }: { onOpen?: (path: string) => void }) {
   // ---- ドラッグ＆ドロップで移動 ----
   const dragItems = useRef<string[]>([]) // 掴んでいる項目の絶対パス
   const [dropTarget, setDropTarget] = useState<string | null>(null) // ドロップ先フォルダ(ハイライト)
+  // ドラッグ中ゴースト(WebKitGTKは標準ドラッグ画像が出ないので自前で「何を掴んでるか」を表示)
+  const [ghost, setGhost] = useState<{ label: string; count: number; x: number; y: number } | null>(null)
   // 掴んだ項目が選択内なら選択全部、そうでなければその1個だけ動かす
-  function startItemDrag(name: string) {
-    dragItems.current = (sel.has(name) ? [...sel] : [name]).map((n) => resolve(cwd, n))
+  function startItemDrag(name: string, e?: React.DragEvent) {
+    const names = sel.has(name) ? [...sel] : [name]
+    dragItems.current = names.map((n) => resolve(cwd, n))
+    setGhost({ label: name, count: names.length, x: e?.clientX ?? 0, y: e?.clientY ?? 0 })
+    // 標準のドラッグ画像(WebKitGTKでは空白/壊れがち)を透明にして自前ゴーストだけ見せる
+    if (e?.dataTransfer) {
+      const img = new Image()
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      try { e.dataTransfer.setDragImage(img, 0, 0) } catch { /* */ }
+    }
   }
+  // ドラッグ中のゴースト位置追従＆終了で消す
+  useEffect(() => {
+    if (!ghost) return
+    const move = (e: DragEvent) => setGhost((g) => (g ? { ...g, x: e.clientX, y: e.clientY } : g))
+    const end = () => setGhost(null)
+    window.addEventListener('dragover', move)
+    window.addEventListener('dragend', end)
+    window.addEventListener('drop', end)
+    return () => {
+      window.removeEventListener('dragover', move)
+      window.removeEventListener('dragend', end)
+      window.removeEventListener('drop', end)
+    }
+  }, [ghost])
   function moveInto(destDir: string) {
     const srcs = dragItems.current
     dragItems.current = []
     setDropTarget(null)
+    setGhost(null)
     if (!srcs.length || !vfs.isDir(destDir)) return
     vfs.batch(() => srcs.forEach((s) => { if (vfs.parentOf(s) !== destDir) vfs.move(s, destDir) }))
     setSel(new Set())
@@ -488,13 +513,13 @@ export function Files({ onOpen }: { onOpen?: (path: string) => void }) {
             {dirs.length > 0 && <div className="mb-1 text-xs text-neutral-400">フォルダー ({dirs.length})</div>}
             <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
               {dirs.map((name) => (
-                <Tile key={name} name={name} dir stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} onDragStart={() => startItemDrag(name)} onDropInto={() => moveInto(resolve(cwd, name))} />
+                <Tile key={name} name={name} dir stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} onDragStart={(e) => startItemDrag(name, e)} onDropInto={() => moveInto(resolve(cwd, name))} />
               ))}
             </div>
             {files.length > 0 && <div className="mt-3 mb-1 text-xs text-neutral-400">ファイル ({files.length})</div>}
             <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
               {files.map((name) => (
-                <Tile key={name} name={name} stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} onDragStart={() => startItemDrag(name)} />
+                <Tile key={name} name={name} stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} onDragStart={(e) => startItemDrag(name, e)} />
               ))}
             </div>
             {entries.length === 0 && <p className="mt-8 text-center text-xs text-neutral-600">（空のフォルダー）— 右クリックで新規作成</p>}
@@ -538,6 +563,18 @@ export function Files({ onOpen }: { onOpen?: (path: string) => void }) {
           )}
         </div>
       )}
+
+      {/* ドラッグ中ゴースト = 何を掴んでいるか(アイコン+名前+件数)をカーソルに追従表示 */}
+      {ghost && (
+        <div
+          className="glass pointer-events-none fixed z-[60] flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-white shadow-lg"
+          style={{ left: ghost.x + 12, top: ghost.y + 12 }}
+        >
+          <IconFile className="h-4 w-4 shrink-0" />
+          <span className="max-w-40 truncate">{ghost.label}</span>
+          {ghost.count > 1 && <span className="rounded-full bg-white/20 px-1.5 text-[10px]">{ghost.count}</span>}
+        </div>
+      )}
     </div>
   )
 }
@@ -550,13 +587,13 @@ function MenuItem({ children, onClick, danger }: { children: React.ReactNode; on
   )
 }
 
-function Tile({ name, dir, stat, selected, onClick, onOpen, onMenu, onDragStart, onDropInto }: { name: string; dir?: boolean; stat: { ct: number; mt: number; size: number } | null; selected: boolean; onClick: (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void; onOpen: () => void; onMenu: (x: number, y: number) => void; onDragStart: () => void; onDropInto?: () => void }) {
+function Tile({ name, dir, stat, selected, onClick, onOpen, onMenu, onDragStart, onDropInto }: { name: string; dir?: boolean; stat: { ct: number; mt: number; size: number } | null; selected: boolean; onClick: (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void; onOpen: () => void; onMenu: (x: number, y: number) => void; onDragStart: (e: React.DragEvent) => void; onDropInto?: () => void }) {
   const [over, setOver] = useState(false)
   const sub = dir ? `フォルダー · ${stat?.size ?? 0}項目` : `${fmtSize(stat?.size ?? 0)}`
   return (
     <div
       draggable
-      onDragStart={(e) => { e.stopPropagation(); onDragStart(); try { e.dataTransfer.setData('text/plain', name); e.dataTransfer.effectAllowed = 'move' } catch { /* */ } }}
+      onDragStart={(e) => { e.stopPropagation(); try { e.dataTransfer.setData('text/plain', name); e.dataTransfer.effectAllowed = 'move' } catch { /* */ }; onDragStart(e) }}
       onDragOver={onDropInto ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setOver(true) } : undefined}
       onDragLeave={onDropInto ? () => setOver(false) : undefined}
       onDrop={onDropInto ? (e) => { e.preventDefault(); e.stopPropagation(); setOver(false); onDropInto() } : undefined}
