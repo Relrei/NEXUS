@@ -88,7 +88,7 @@ export function Win({
         pointerEvents: dragOffset ? 'none' : undefined,
         opacity: dragOffset ? 0.85 : undefined,
       }}
-      className={`glass-win absolute flex flex-col overflow-hidden rounded-xl ${
+      className={`glass-win absolute flex flex-col overflow-hidden rounded-xl ${tiled ? 'is-tiled' : ''} ${
         tiled && !dragOffset ? 'transition-[left,top,width,height] duration-150' : ''
       } ${focused ? 'border-2' : ''}`}
     >

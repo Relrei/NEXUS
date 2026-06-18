@@ -25,11 +25,19 @@ function load(): Store {
     '/home/user/Desktop': { type: 'dir', ct: t, mt: t },
     '/home/user/Documents': { type: 'dir', ct: t, mt: t },
     '/home/user/Downloads': { type: 'dir', ct: t, mt: t },
-    '/home/user/welcome.txt': {
+    '/home/user/Pictures': { type: 'dir', ct: t, mt: t },
+    // Desktopが空だと寂しいので最初から中身を置く(画面のアイコンとも一致する)
+    '/home/user/Desktop/welcome.txt': {
       type: 'file',
       content: 'NEXUS OS へようこそ。\nターミナルで `help` と打つと使い方が出ます。\n',
       ct: t, mt: t,
     },
+    '/home/user/Desktop/はじめに.md': {
+      type: 'file',
+      content: '# はじめに\n\n- 下端にカーソルを置くとドック\n- 窓は右上の ◇ でフロート/タイル切替\n- エクスプローラーはタイル/グラフ/ノードの3表示\n- 設定からデータの Export/Import ができます\n',
+      ct: t, mt: t,
+    },
+    '/home/user/Desktop/メモ': { type: 'dir', ct: t, mt: t },
   }
   localStorage.setItem(KEY, JSON.stringify(s))
   return s

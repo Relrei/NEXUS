@@ -23,7 +23,6 @@ body {
 .glass {
   background: rgba(30, 30, 32, 0.7);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
 }
@@ -34,7 +33,6 @@ body {
 .glass-win {
   background: rgba(22, 22, 24, 0.82);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
 }
@@ -42,7 +40,6 @@ body {
 .topbar {
   background: rgba(22, 22, 24, 0.82);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -51,7 +48,6 @@ body {
 .fx .glass {
   background: rgba(24, 24, 26, 0.62);
   backdrop-filter: blur(26px) saturate(150%);
-  -webkit-backdrop-filter: blur(26px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
@@ -60,20 +56,17 @@ body {
 .fx .glass-pill {
   background: rgba(40, 40, 44, 0.55);
   backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .fx .topbar {
   background: rgba(22, 22, 24, 0.74);
   backdrop-filter: blur(30px) saturate(150%);
-  -webkit-backdrop-filter: blur(30px) saturate(150%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 .fx .glass-win {
   background: rgba(22, 22, 24, 0.74);
   backdrop-filter: blur(30px) saturate(150%);
-  -webkit-backdrop-filter: blur(30px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
@@ -86,7 +79,10 @@ body {
 .glassgl .glass-win {
   background: rgba(18, 18, 21, 0.52);
   backdrop-filter: blur(16px) saturate(115%);
-  -webkit-backdrop-filter: blur(16px) saturate(115%);
+}
+/* タイル配置の窓(作業窓)は不透明80%にして読みやすく。フロート窓は透明感を残す。 */
+.glassgl .glass-win.is-tiled {
+  background: rgba(18, 18, 21, 0.8);
 }
 /* 文字はごく薄い影だけ(黒い縁取りは無し)。アイコンは色付きなので影を付けない。 */
 .glassgl .glass-win {
