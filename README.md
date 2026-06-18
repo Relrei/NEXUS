@@ -1,5 +1,12 @@
 # NEXUS （alpha）
 
+[![Built with Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-d97757?logo=anthropic&logoColor=white)](https://claude.com/claude-code)
+![status](https://img.shields.io/badge/status-alpha-orange)
+![license](https://img.shields.io/badge/license-MIT-blue)
+
+> 🤖 このプロジェクトは **Anthropic の Claude（Claude Code）** とのペアプログラミングで開発しています。
+> コミットには `Co-Authored-By: Claude` が含まれます。
+
 散らばった素材を集め、束ね、渡せる形に**梱包**する、個人用の倉庫 / ナレッジ・デスクトップ。
 Arch + Hyprland 風の「動くWebデスクトップ環境」として作っています（ローカル完結・サーバー不要）。
 
