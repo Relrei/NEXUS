@@ -102,7 +102,7 @@ export function Win({
           e.preventDefault()
           onMenu(e.clientX, e.clientY)
         }}
-        className={`flex shrink-0 items-center gap-1 border-b border-white/10 bg-white/5 px-2 py-1 select-none ${
+        className={`win-titlebar flex shrink-0 items-center gap-1 border-b border-white/10 bg-white/5 px-2 py-1 select-none ${
           movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-grab'
         }`}
       >

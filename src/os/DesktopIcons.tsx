@@ -103,7 +103,7 @@ export function DesktopIcons({ items, onOpen }: { items: Shortcut[]; onOpen: (id
             }}
             onDoubleClick={() => onOpen(it.id)}
             style={{ left: pos.x, top: pos.y, width: CW - 4 }}
-            className={`absolute z-10 flex cursor-grab flex-col items-center gap-1 select-none active:cursor-grabbing ${
+            className={`absolute z-[2] flex cursor-grab flex-col items-center gap-1 select-none active:cursor-grabbing ${
               ghost?.id === it.id ? 'opacity-80' : ''
             }`}
             title={`${it.name}（ダブルクリックで開く・ドラッグで移動）`}

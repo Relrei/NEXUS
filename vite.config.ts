@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => {
                 name: 'NEXUS',
                 short_name: 'NEXUS',
                 description: '散らばった素材を集め、束ね、渡せる形に梱包する個人の倉庫',
-                theme_color: '#05070d',
-                background_color: '#05070d',
+                theme_color: '#000000',
+                background_color: '#000000',
                 display: 'standalone',
                 orientation: 'any',
                 icons: [

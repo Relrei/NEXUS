@@ -10,6 +10,7 @@ import { Browser } from './os/apps/Browser'
 import { AudioViz } from './os/AudioViz'
 import { LockScreen } from './os/LockScreen'
 import { DesktopIcons } from './os/DesktopIcons'
+import { GlassFX } from './os/GlassFX'
 import { IconBell, IconFolder, IconGear, IconGlobe, IconPower, IconTerminal, IconText, IconUser, IconVolume } from './icons'
 
 type AppId = 'terminal' | 'files' | 'editor' | 'settings' | 'browser'
@@ -104,7 +105,7 @@ function wIcon(c: number): string {
 
 type Stats = Record<string, number>
 
-function Bar({ ws, setWs, occupied, title, accent, onLock }: { ws: number; setWs: (n: number) => void; occupied: Set<number>; title: string; accent: string; onLock: () => void }) {
+function Bar({ ws, setWs, occupied, title, accent, onLock, barHidden, onHideBar, onShowBar }: { ws: number; setWs: (n: number) => void; occupied: Set<number>; title: string; accent: string; onLock: () => void; barHidden?: boolean; onHideBar?: () => void; onShowBar?: () => void }) {
   const [now, setNow] = useState(() => new Date())
   const [s, setS] = useState<Stats | null>(null)
   const [power, setPower] = useState(false)
@@ -205,6 +206,11 @@ function Bar({ ws, setWs, occupied, title, accent, onLock }: { ws: number; setWs
           {power && (
             <div className="glass absolute right-0 mt-1 w-32 rounded-xl p-1 text-neutral-300">
               <button onClick={() => (setPower(false), onLock())} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-white/10">ロック</button>
+              {barHidden ? (
+                <button onClick={() => (setPower(false), onShowBar?.())} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-white/10">帯を表示</button>
+              ) : (
+                <button onClick={() => (setPower(false), onHideBar?.())} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-white/10">帯を隠す（上端で再表示）</button>
+              )}
               <button onClick={() => document.documentElement.requestFullscreen?.()} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-white/10">全画面</button>
               <button onClick={() => location.reload()} className="block w-full rounded-lg px-2 py-1 text-left hover:bg-white/10">リロード</button>
             </div>
@@ -234,7 +240,7 @@ export default function App() {
   const [wins, setWins] = useState<W[]>(session0?.wins ?? [])
   const [wallpaper, setWp] = useState<string>()
   const [accent, setAccent] = useState('#d4d4d4')
-  const [drawer, setDrawer] = useState(false)
+  const [dockShow, setDockShow] = useState(false) // 自動非表示ドック=下端ホバーで出る
   const [ws, setWs] = useState(session0?.ws ?? 1)
   const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null)
   const [deskMenu, setDeskMenu] = useState<{ x: number; y: number } | null>(null)
@@ -243,6 +249,11 @@ export default function App() {
   const [size, setSize] = useState({ w: 1280, h: 720 })
   const [ratios, setRatios] = useState<number[]>([])
   const [locked, setLocked] = useState(false)
+  // 上の帯(waybar)の表示制御。既定=常時表示(実Hyprland waybarの再現なので自動非表示しない)。
+  // 電源メニューから手動で隠せる(その時だけ上端ホバーで一時表示)。
+  const [barHidden, setBarHidden] = useState(() => localStorage.getItem('nexus.barHidden') === '1')
+  const [barPeek, setBarPeek] = useState(false)
+  useEffect(() => { localStorage.setItem('nexus.barHidden', barHidden ? '1' : '0') }, [barHidden])
   // 液体ガラスは全端末で既定ON(モバイル/iPadもPCと統合)。設定トグルが唯一の制御点。
   // 重い端末は設定で軽量(OFF)に切替可能。localStorage `nexus.fx` を尊重。
   const [fx, setFx] = useState(() => localStorage.getItem('nexus.fx') !== '0')
@@ -324,7 +335,6 @@ export default function App() {
       if (e.key === 'Escape') {
         setMenu(null)
         setDeskMenu(null)
-        setDrawer(false)
       }
     }
     // capture段で受ける(ブラウザ既定より先に拾えるものは拾う)
@@ -357,7 +367,6 @@ export default function App() {
         x: 80 + n * 30, y: 60 + n * 28, w: d.w, h: d.h, z: ++z.current, state: 'normal' as const,
       }]
     })
-    setDrawer(false)
   }
   const upd = (id: string, f: (w: W) => W) => setWins((all) => all.map((w) => (w.id === id ? f(w) : w)))
   const close = (id: string) => setWins((all) => all.filter((w) => w.id !== id))
@@ -467,13 +476,12 @@ export default function App() {
     return r ? { x: r.x + GAP / 2, y: r.y + GAP / 2, w: r.w - GAP, h: r.h - GAP } : { x: w.x, y: w.y, w: w.w, h: w.h }
   }
 
-  const grab = useRef<{ sy: number } | null>(null)
   const stateRef = useRef({ wins, ws })
   stateRef.current = { wins, ws }
 
   return (
     <div
-      className={`relative h-screen w-screen overflow-hidden bg-neutral-950 text-neutral-100 ${fx ? 'fx' : ''} ${dragging ? 'select-none' : ''}`}
+      className={`relative h-screen w-screen overflow-hidden bg-neutral-950 text-neutral-100 ${fx ? 'fx' : ''} ${fx && wallpaper ? 'glassgl' : ''} ${dragging ? 'select-none' : ''}`}
       onClick={() => {
         if (menu) setMenu(null)
         if (deskMenu) setDeskMenu(null)
@@ -487,9 +495,32 @@ export default function App() {
       )}
 
       <div className="relative z-10 flex h-full flex-col">
-      <Bar ws={ws} setWs={setWs} occupied={occupied} title={activeTitle} accent={accent} onLock={() => setLocked(true)} />
+      {(!barHidden || barPeek) && (
+        <div
+          className={barHidden ? 'fixed inset-x-0 top-0 z-40' : ''}
+          onMouseLeave={() => barHidden && setBarPeek(false)}
+        >
+          <Bar
+            ws={ws}
+            setWs={setWs}
+            occupied={occupied}
+            title={activeTitle}
+            accent={accent}
+            onLock={() => setLocked(true)}
+            barHidden={barHidden}
+            onHideBar={() => setBarHidden(true)}
+            onShowBar={() => { setBarHidden(false); setBarPeek(false) }}
+          />
+        </div>
+      )}
+      {/* 帯を隠している間は、上端の細い帯にカーソルを乗せると一時表示 */}
+      {barHidden && !barPeek && (
+        <div className="fixed inset-x-0 top-0 z-30 h-1.5" onMouseEnter={() => setBarPeek(true)} />
+      )}
 
       <main ref={mainRef} className="relative min-h-0 flex-1 overflow-hidden">
+        {/* 本物の液体ガラス(WebGL屈折)。窓(.glass-win)の裏に壁紙を歪ませて描く。アイコン(z2)の上・窓(z11+)の下。 */}
+        <GlassFX wallpaper={wallpaper} active={fx && !!wallpaper} />
         {/* デスクトップ操作面(右クリック/長押し)。壁紙は背面なので透明な操作レイヤーだけ置く */}
         <div
           className="absolute inset-0"
@@ -597,50 +628,42 @@ export default function App() {
                 <a.Icon className="h-3.5 w-3.5" />{a.name}
               </button>
             ))}
+            {here.length > 0 && (
+              <>
+                <div className="my-1 h-px bg-white/10" />
+                <div className="px-2 pb-1 text-[10px] text-neutral-500">ウィンドウ</div>
+                {here.map((w) => (
+                  <button key={w.id} onClick={() => { taskClick(w); setDeskMenu(null) }} className={`block w-full truncate rounded-lg px-2 py-1 text-left hover:bg-white/10 ${w.state === 'min' ? 'text-neutral-500' : 'text-neutral-200'}`}>
+                    {w.title}{w.state === 'min' ? '（最小化）' : ''}
+                  </button>
+                ))}
+              </>
+            )}
             <div className="my-1 h-px bg-white/10" />
             <button onClick={() => { wpInput.current?.click(); setDeskMenu(null) }} className="block w-full rounded-lg px-2 py-1 text-left text-neutral-200 hover:bg-white/10">壁紙を変更</button>
             <button onClick={() => { localStorage.removeItem('nexus.icons'); location.reload() }} className="block w-full rounded-lg px-2 py-1 text-left text-neutral-200 hover:bg-white/10">アイコンを整列</button>
           </div>
         )}
 
-        {/* アプリドロワー */}
-        {drawer && (
-          <div className="absolute inset-0 z-40 bg-neutral-950/70 backdrop-blur" onClick={() => setDrawer(false)}>
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2" onClick={(e) => e.stopPropagation()}>
-              <div className="glass grid grid-cols-4 gap-3 rounded-2xl p-5">
-                {APPS.map((a) => (
-                  <button key={a.id} onClick={() => openApp(a.id)} className="flex w-20 flex-col items-center gap-2 rounded-lg p-2 hover:bg-white/10">
-                    <span className="glass-pill grid h-12 w-12 place-items-center rounded-xl"><a.Icon className="h-6 w-6 text-neutral-100" /></span>
-                    <span className="text-[11px] text-neutral-300">{a.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ドック */}
-        <div
-          onPointerDown={(e) => (grab.current = { sy: e.clientY })}
-          onPointerMove={(e) => {
-            if (grab.current && grab.current.sy - e.clientY > 30) {
-              setDrawer(true)
-              grab.current = null
-            }
-          }}
-          onPointerUp={() => (grab.current = null)}
-          className="glass absolute bottom-2 left-1/2 z-30 flex max-w-[92vw] -translate-x-1/2 items-center gap-1 rounded-2xl px-2 py-1.5"
-        >
-          <button onClick={() => setDrawer(true)} title="アプリ一覧 (上にドラッグでも)" className="grid h-9 w-9 place-items-center rounded-lg bg-white/10 text-lg hover:bg-white/15">⊞</button>
-          {APPS.map((a) => (
-            <button key={a.id} onClick={() => openApp(a.id)} title={a.name} className="grid h-9 w-9 place-items-center rounded-lg text-neutral-200 hover:bg-white/10"><a.Icon className="h-5 w-5" /></button>
-          ))}
-          {here.length > 0 && <span className="mx-1 h-6 w-px bg-neutral-700" />}
-          {here.map((w) => (
-            <button key={w.id} onClick={() => taskClick(w)} title={w.title} className={`max-w-28 truncate rounded-lg px-2 py-1.5 text-[11px] hover:bg-white/10 ${w.state === 'min' ? 'text-neutral-500' : 'text-neutral-200'}`}>{w.title}</button>
-          ))}
-        </div>
       </main>
+      </div>
+
+      {/* 自動非表示ドック: 画面下端にカーソルを置くと出る。全ウィンドウより前面(ルート階層z-30)。 */}
+      <div className="fixed inset-x-0 bottom-0 z-20 h-2" onMouseEnter={() => setDockShow(true)} />
+      <div
+        onMouseEnter={() => setDockShow(true)}
+        onMouseLeave={() => setDockShow(false)}
+        className={`glass fixed bottom-2 left-1/2 z-30 flex max-w-[92vw] -translate-x-1/2 items-center gap-1 rounded-2xl px-2 py-1.5 transition-[transform,opacity] duration-200 ${
+          dockShow ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-[180%] opacity-0'
+        }`}
+      >
+        {APPS.map((a) => (
+          <button key={a.id} onClick={() => openApp(a.id)} title={a.name} className="grid h-9 w-9 place-items-center rounded-lg text-neutral-200 hover:bg-white/10"><a.Icon className="h-5 w-5" /></button>
+        ))}
+        {here.length > 0 && <span className="mx-1 h-6 w-px bg-neutral-700" />}
+        {here.map((w) => (
+          <button key={w.id} onClick={() => taskClick(w)} title={w.title} className={`max-w-28 truncate rounded-lg px-2 py-1.5 text-[11px] hover:bg-white/10 ${w.state === 'min' ? 'text-neutral-500' : 'text-neutral-200'}`}>{w.title}</button>
+        ))}
       </div>
 
       {locked && <LockScreen wallpaper={wallpaper} onUnlock={() => setLocked(false)} />}

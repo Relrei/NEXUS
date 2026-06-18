@@ -37,22 +37,13 @@ export const IconLink = ({ className }: P) => (
   </svg>
 )
 export const IconImage = ({ className }: P) => (
-  <svg {...base(className)}>
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <path d="m21 15-5-5L5 21" />
-  </svg>
+  <img src="/icons/image.svg" className={className} alt="" draggable={false} />
 )
 export const IconFile = ({ className }: P) => (
-  <svg {...base(className)}>
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <path d="M14 2v6h6" />
-  </svg>
+  <img src="/icons/file.svg" className={className} alt="" draggable={false} />
 )
 export const IconText = ({ className }: P) => (
-  <svg {...base(className)}>
-    <path d="M4 6h16M4 12h16M4 18h10" />
-  </svg>
+  <img src="/icons/file.svg" className={className} alt="" draggable={false} />
 )
 export const IconNotes = ({ className }: P) => (
   <svg {...base(className)}>
@@ -79,10 +70,9 @@ export const IconClip = ({ className }: P) => (
     <path d="M21 12.5 12.5 21a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10 18" />
   </svg>
 )
+// フォルダ/ファイル/画像は、このマシンのHyprlandアイコンテーマ(Flat-Remix-Blue-Dark)を public/icons/ に複製して再利用。
 export const IconFolder = ({ className }: P) => (
-  <svg {...base(className)}>
-    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-  </svg>
+  <img src="/icons/folder.svg" className={className} alt="" draggable={false} />
 )
 export const IconTerminal = ({ className }: P) => (
   <svg {...base(className)}>

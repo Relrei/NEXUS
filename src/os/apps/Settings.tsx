@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { vfs } from '../vfs'
+import { exportToFile, importFromFile } from '../../backup'
 
 // 設定。壁紙・ガラス。壁紙の実体取得/保存は親(App)が持つ。
 export function Settings({
@@ -16,7 +17,33 @@ export function Settings({
   onToggleFx: (v: boolean) => void
 }) {
   const input = useRef<HTMLInputElement>(null)
+  const importInput = useRef<HTMLInputElement>(null)
   const [logMax, setLogMax] = useState(() => vfs.logMax())
+  const [busy, setBusy] = useState(false)
+
+  async function doExport() {
+    setBusy(true)
+    try {
+      await exportToFile()
+    } catch (e) {
+      alert('エクスポート失敗: ' + e)
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function doImport(file: File) {
+    if (!confirm('このファイルの内容を今の倉庫にマージします。よろしいですか？')) return
+    setBusy(true)
+    try {
+      const r = await importFromFile(file, 'merge')
+      alert(`取り込み完了: items ${r.items} / blobs ${r.blobs}\n再読み込みします。`)
+      location.reload()
+    } catch (e) {
+      alert('インポート失敗: ' + e)
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <div className="space-y-4 p-4 text-sm">
       <div>
@@ -68,6 +95,36 @@ export function Settings({
           <span className="w-10 tabular-nums text-neutral-300">{logMax} 件</span>
         </div>
         <p className="mt-1 text-[11px] text-neutral-600">変更/起動の履歴を <span className="font-mono">/home/user/.log</span> に最大この件数まで。重ければ少なめに（既定3）。</p>
+      </div>
+
+      <div>
+        <div className="mb-2 text-neutral-400">データ（バックアップ / アプリ移行）</div>
+        <div className="flex gap-2">
+          <button
+            onClick={doExport}
+            disabled={busy}
+            className="rounded border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+          >
+            エクスポート
+          </button>
+          <button
+            onClick={() => importInput.current?.click()}
+            disabled={busy}
+            className="rounded border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+          >
+            インポート
+          </button>
+          <input
+            ref={importInput}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => e.target.files?.[0] && doImport(e.target.files[0])}
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-neutral-600">
+          倉庫(items)＋実体(blobs)＋壁紙を1ファイルに梱包。別アプリ(Tauri)や端末へ移すときはこれで運ぶ。
+        </p>
       </div>
 
       <div className="mt-2 border-t border-white/10 pt-3 text-[11px] leading-relaxed text-neutral-600">

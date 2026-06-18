@@ -128,6 +128,22 @@ export function Files({ onOpen }: { onOpen?: (path: string) => void }) {
   }
   const selPaths = () => [...sel].map((n) => resolve(cwd, n))
 
+  // ---- ドラッグ＆ドロップで移動 ----
+  const dragItems = useRef<string[]>([]) // 掴んでいる項目の絶対パス
+  const [dropTarget, setDropTarget] = useState<string | null>(null) // ドロップ先フォルダ(ハイライト)
+  // 掴んだ項目が選択内なら選択全部、そうでなければその1個だけ動かす
+  function startItemDrag(name: string) {
+    dragItems.current = (sel.has(name) ? [...sel] : [name]).map((n) => resolve(cwd, n))
+  }
+  function moveInto(destDir: string) {
+    const srcs = dragItems.current
+    dragItems.current = []
+    setDropTarget(null)
+    if (!srcs.length || !vfs.isDir(destDir)) return
+    vfs.batch(() => srcs.forEach((s) => { if (vfs.parentOf(s) !== destDir) vfs.move(s, destDir) }))
+    setSel(new Set())
+  }
+
   // ---- 操作 ----
   function newFolder() {
     const n = prompt('新規フォルダー名', '新しいフォルダー')
@@ -233,7 +249,16 @@ export function Files({ onOpen }: { onOpen?: (path: string) => void }) {
         <div className="group flex items-center" style={{ paddingLeft: depth * 12 }}>
           {grip && <span className="cursor-grab px-0.5 text-[10px] text-neutral-600 opacity-0 group-hover:opacity-100" title="ドラッグで並べ替え">⠿</span>}
           <button draggable={false} onPointerDown={(e) => e.stopPropagation()} onClick={() => subs.length && toggleExp(path)} className="w-3.5 shrink-0 text-center text-[10px] text-neutral-500 hover:text-white">{subs.length ? (exp ? '▾' : '＞') : ''}</button>
-          <button draggable={false} onPointerDown={(e) => e.stopPropagation()} onClick={() => (exists ? navigate(path) : (vfs.mkdir(path), navigate(path)))} className={navBtn(cwd === path)} title={path}>
+          <button
+            draggable={false}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => (exists ? navigate(path) : (vfs.mkdir(path), navigate(path)))}
+            onDragOver={(e) => { if (dragItems.current.length) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTarget(path) } }}
+            onDragLeave={() => setDropTarget((d) => (d === path ? null : d))}
+            onDrop={(e) => { if (dragItems.current.length) { e.preventDefault(); e.stopPropagation(); moveInto(path) } }}
+            className={`${navBtn(cwd === path)} ${dropTarget === path ? 'ring-1 ring-white/70 bg-white/15' : ''}`}
+            title={path}
+          >
             <IconFolder className="h-4 w-4 shrink-0" />{label}
           </button>
           {onRemove && <button draggable={false} onPointerDown={(e) => e.stopPropagation()} onClick={onRemove} className="px-1 text-[10px] text-neutral-500 opacity-0 hover:text-red-300 group-hover:opacity-100">✕</button>}
@@ -376,7 +401,10 @@ export function Files({ onOpen }: { onOpen?: (path: string) => void }) {
                 {i > 0 && <span className="h-px w-4 bg-white/25" />}
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(seg.path) }}
-                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ${seg.path === cwd ? 'bg-white/20 text-white' : 'text-neutral-300 hover:bg-white/10'}`}
+                  onDragOver={(e) => { if (dragItems.current.length) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTarget(seg.path) } }}
+                  onDragLeave={() => setDropTarget((d) => (d === seg.path ? null : d))}
+                  onDrop={(e) => { if (dragItems.current.length) { e.preventDefault(); e.stopPropagation(); moveInto(seg.path) } }}
+                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ${dropTarget === seg.path ? 'ring-1 ring-white/70 bg-white/15' : seg.path === cwd ? 'bg-white/20 text-white' : 'text-neutral-300 hover:bg-white/10'}`}
                   title={seg.path}
                 >
                   <span className="h-2 w-2 rounded-full bg-current opacity-70" />{seg.name}
@@ -460,13 +488,13 @@ export function Files({ onOpen }: { onOpen?: (path: string) => void }) {
             {dirs.length > 0 && <div className="mb-1 text-xs text-neutral-400">フォルダー ({dirs.length})</div>}
             <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
               {dirs.map((name) => (
-                <Tile key={name} name={name} dir stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} />
+                <Tile key={name} name={name} dir stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} onDragStart={() => startItemDrag(name)} onDropInto={() => moveInto(resolve(cwd, name))} />
               ))}
             </div>
             {files.length > 0 && <div className="mt-3 mb-1 text-xs text-neutral-400">ファイル ({files.length})</div>}
             <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
               {files.map((name) => (
-                <Tile key={name} name={name} stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} />
+                <Tile key={name} name={name} stat={vfs.stat(resolve(cwd, name))} selected={sel.has(name)} onClick={(e) => clickItem(name, e)} onOpen={() => open(name)} onMenu={(x, y) => { if (!sel.has(name)) setSel(new Set([name])); setMenu({ x, y, name }) }} onDragStart={() => startItemDrag(name)} />
               ))}
             </div>
             {entries.length === 0 && <p className="mt-8 text-center text-xs text-neutral-600">（空のフォルダー）— 右クリックで新規作成</p>}
@@ -522,14 +550,20 @@ function MenuItem({ children, onClick, danger }: { children: React.ReactNode; on
   )
 }
 
-function Tile({ name, dir, stat, selected, onClick, onOpen, onMenu }: { name: string; dir?: boolean; stat: { ct: number; mt: number; size: number } | null; selected: boolean; onClick: (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void; onOpen: () => void; onMenu: (x: number, y: number) => void }) {
+function Tile({ name, dir, stat, selected, onClick, onOpen, onMenu, onDragStart, onDropInto }: { name: string; dir?: boolean; stat: { ct: number; mt: number; size: number } | null; selected: boolean; onClick: (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => void; onOpen: () => void; onMenu: (x: number, y: number) => void; onDragStart: () => void; onDropInto?: () => void }) {
+  const [over, setOver] = useState(false)
   const sub = dir ? `フォルダー · ${stat?.size ?? 0}項目` : `${fmtSize(stat?.size ?? 0)}`
   return (
     <div
+      draggable
+      onDragStart={(e) => { e.stopPropagation(); onDragStart(); try { e.dataTransfer.setData('text/plain', name); e.dataTransfer.effectAllowed = 'move' } catch { /* */ } }}
+      onDragOver={onDropInto ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setOver(true) } : undefined}
+      onDragLeave={onDropInto ? () => setOver(false) : undefined}
+      onDrop={onDropInto ? (e) => { e.preventDefault(); e.stopPropagation(); setOver(false); onDropInto() } : undefined}
       onClick={(e) => { e.stopPropagation(); onClick(e) }}
       onDoubleClick={onOpen}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onMenu(e.clientX, e.clientY) }}
-      className={`flex cursor-pointer items-center gap-2 rounded p-2 ${selected ? 'bg-white/25 ring-1 ring-white/40' : 'hover:bg-white/10'}`}
+      className={`flex cursor-pointer items-center gap-2 rounded p-2 ${over ? 'bg-white/20 ring-2 ring-white/70' : selected ? 'bg-white/25 ring-1 ring-white/40' : 'hover:bg-white/10'}`}
       title={`${name}\n${sub}\n更新: ${fmtDate(stat?.mt ?? 0)}`}
     >
       {dir ? <IconFolder className="h-7 w-7 shrink-0 text-neutral-200" /> : <IconFile className="h-7 w-7 shrink-0 text-neutral-400" />}
