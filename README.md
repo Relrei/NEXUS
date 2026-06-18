@@ -1,73 +1,54 @@
-# React + TypeScript + Vite
+# NEXUS （alpha）
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+散らばった素材を集め、束ね、渡せる形に**梱包**する、個人用の倉庫 / ナレッジ・デスクトップ。
+Arch + Hyprland 風の「動くWebデスクトップ環境」として作っています（ローカル完結・サーバー不要）。
 
-Currently, two official plugins are available:
+> ⚠️ **alpha / WIP / 個人用**。仕様も見た目も頻繁に変わります。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## すぐ使う（ダウンロードして開くだけ）
 
-## React Compiler
+1. [`NEXUS.html`](./NEXUS.html) をダウンロード
+2. ブラウザで開く（ダブルクリック）
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+これだけで動きます。単一HTMLに全部入り（JS/CSS/アイコンをインライン）。
+データはそのブラウザ内（IndexedDB）にローカル保存されます。
 
-## Expanding the ESLint configuration
+> Chromium 系を推奨（GPUで滑らかに動きます）。
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 開発して使う
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev           # http://localhost:5173
+npm run build         # dist/ に通常ビルド
+npm run build:single  # dist-single/index.html に単一HTMLを生成
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## アプリとして起動（Linux・Chromium app mode）
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+GPUが効いて軽いので、ネイティブ風に使うならこれ：
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+./launch-app.sh
 ```
+
+（`chromium --app` で単一HTMLを専用プロファイルで起動します）
+
+## 機能（抜粋）
+
+- 仮想ファイルシステム上のエクスプローラー（タイル / グラフ / ノードの3ビュー・D&D移動・検索）
+- ターミナル / エディタ / ブラウザ などのアプリを窓で開く（タイル & フロート）
+- waybar 風トップバー・自動非表示ドック・壁紙・液体ガラス（CSS）
+- データの Export / Import（端末・環境間の移行用）
+
+## 技術
+
+Vite + React + TypeScript + Tailwind + Dexie(IndexedDB)。依存は最小限。
+
+## ライセンス
+
+MIT（[LICENSE](./LICENSE)）
+
+---
+
+🤖 Built with [Claude Code](https://claude.com/claude-code)
