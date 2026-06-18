@@ -12,6 +12,12 @@ Arch + Hyprland 風の「動くWebデスクトップ環境」として作って�
 
 > ⚠️ **alpha / WIP / 個人用**。仕様も見た目も頻繁に変わります。
 
+## スクリーンショット
+
+![デスクトップ](docs/preview/desktop.png)
+
+![エクスプローラー（液体ガラス）](docs/preview/explorer.png)
+
 ## すぐ使う（ダウンロードして開くだけ）
 
 1. [`NEXUS.html`](./NEXUS.html) をダウンロード
