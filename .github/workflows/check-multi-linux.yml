@@ -1,0 +1,38 @@
+name: Check multi Linux shell
+
+on:
+  push:
+    branches:
+      - feature/multi-linux-shell-foundation
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build application
+        run: npm run build
+      - name: Build single HTML
+        run: npm run build:single
+      - name: Verify output
+        run: |
+          test -s dist-single/index.html
+          grep -q 'NEXUS' dist-single/index.html
+      - name: Upload single HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-multi-linux-preview
+          path: dist-single/index.html
+          if-no-files-found: error
