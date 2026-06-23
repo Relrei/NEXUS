@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import App from './App.tsx'
 import './session.css'
 import './shell-layout.css'
-import { IconFolder, IconGear, IconGlobe, IconPower, IconTerminal, IconText } from './icons'
+import { IconFolder, IconGear, IconGlobe, IconPower, IconSearch, IconTerminal, IconText } from './icons'
 import {
   DISTRO_PROFILES,
   getActiveDistro,
@@ -22,6 +22,11 @@ const LAUNCHER_APPS: LauncherApp[] = [
   { id: 'settings', label: '設定', targetTitle: '設定', icon: <IconGear className="shell-icon" /> },
 ]
 
+function filterApps(query: string) {
+  const q = query.trim().toLowerCase()
+  return q ? LAUNCHER_APPS.filter((app) => `${app.label} ${app.id} ${app.targetTitle}`.toLowerCase().includes(q)) : LAUNCHER_APPS
+}
+
 function openDesktopApp(app: LauncherApp) {
   window.dispatchEvent(new CustomEvent('nexus:open-app', { detail: { app: app.id } }))
   requestAnimationFrame(() => {
@@ -33,8 +38,16 @@ function openDesktopApp(app: LauncherApp) {
 }
 
 function AppButton({ app, onOpen }: { app: LauncherApp; onOpen?: () => void }) {
-  const run = () => { openDesktopApp(app); onOpen?.() }
-  return <button type="button" onClick={run} onPointerUp={(event) => { if (event.pointerType === 'touch') run() }} title={app.label}>{app.icon}</button>
+  return <button type="button" onClick={() => { openDesktopApp(app); onOpen?.() }} title={app.label}>{app.icon}</button>
+}
+
+function SearchBox({ value, onChange, placeholder = 'アプリを検索' }: { value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return (
+    <label className="shell-search-box">
+      <IconSearch className="shell-search-box__icon" />
+      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} aria-label={placeholder} />
+    </label>
+  )
 }
 
 function SessionChooser({ active, onCancel }: { active: DistroId; onCancel: () => void }) {
@@ -63,16 +76,18 @@ function SessionChooser({ active, onCancel }: { active: DistroId; onCancel: () =
 function RofiLauncher({ onClose, onSession }: { onClose: () => void; onSession: () => void }) {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const apps = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return q ? LAUNCHER_APPS.filter((app) => `${app.label} ${app.id}`.toLowerCase().includes(q)) : LAUNCHER_APPS
-  }, [query])
+  const apps = useMemo(() => filterApps(query), [query])
   useEffect(() => { inputRef.current?.focus() }, [])
   return (
     <div className="rofi-screen" role="dialog" aria-modal="true" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="rofi-panel">
-        <div className="rofi-search"><span>⌕</span><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); if (event.key === 'Enter' && apps[0]) { openDesktopApp(apps[0]); onClose() } }} placeholder="アプリを検索…" /><kbd>Alt D</kbd></div>
+        <div className="rofi-search">
+          <IconSearch className="rofi-search__icon" />
+          <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); if (event.key === 'Enter' && apps[0]) { openDesktopApp(apps[0]); onClose() } }} placeholder="アプリを検索…" aria-label="アプリを検索" />
+          <kbd>Alt D</kbd>
+        </div>
         <div className="rofi-grid">{apps.map((app) => <button key={app.id} type="button" onClick={() => { openDesktopApp(app); onClose() }}><span className="rofi-app-icon">{app.icon}</span><span>{app.label}</span></button>)}</div>
+        {!apps.length && <p className="shell-search-empty">一致するアプリはありません</p>}
         <footer className="rofi-footer"><button type="button" onClick={onSession}><IconPower className="shell-icon shell-icon--small" />ログアウト / Linux切替</button></footer>
       </section>
     </div>
@@ -80,21 +95,33 @@ function RofiLauncher({ onClose, onSession }: { onClose: () => void; onSession: 
 }
 
 function ArchTouchDock({ onLauncher, onSession }: { onLauncher: () => void; onSession: () => void }) {
-  return <nav className="arch-touch-dock"><button type="button" className="arch-touch-dock__brand" onClick={onLauncher}>▲</button>{LAUNCHER_APPS.slice(0, 4).map((app) => <AppButton key={app.id} app={app} />)}<button type="button" onClick={onSession}><IconPower className="shell-icon" /></button></nav>
+  return <nav className="arch-touch-dock"><button type="button" className="arch-touch-dock__brand" onClick={onLauncher} title="アプリを検索"><IconSearch className="shell-icon" /></button>{LAUNCHER_APPS.slice(0, 4).map((app) => <AppButton key={app.id} app={app} />)}<button type="button" onClick={onSession} title="ログアウト"><IconPower className="shell-icon" /></button></nav>
 }
 
 function UbuntuShell({ onSession }: { onSession: () => void }) {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const apps = useMemo(() => filterApps(query), [query])
   return <>
-    {open && <div className="ubuntu-overview" onPointerDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}><section className="ubuntu-menu"><div className="ubuntu-menu__search">アプリケーション</div><div className="ubuntu-menu__grid">{LAUNCHER_APPS.map((app) => <button key={app.id} type="button" onClick={() => { openDesktopApp(app); setOpen(false) }}><span>{app.icon}</span><strong>{app.label}</strong></button>)}</div><button type="button" className="ubuntu-menu__logout" onClick={onSession}><IconPower className="shell-icon shell-icon--small" />ログアウト / Linux切替</button></section></div>}
-    <nav className="ubuntu-dock"><button type="button" className="ubuntu-dock__activities" onClick={() => setOpen((value) => !value)} title="アプリケーション">●</button>{LAUNCHER_APPS.map((app) => <AppButton key={app.id} app={app} />)}<span className="ubuntu-dock__spacer" /><button type="button" onClick={onSession}><IconPower className="shell-icon" /></button></nav>
+    {open && <div className="ubuntu-overview" onPointerDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}><section className="ubuntu-menu">
+      <SearchBox value={query} onChange={setQuery} />
+      <div className="ubuntu-menu__grid">{apps.map((app) => <button key={app.id} type="button" onClick={() => { openDesktopApp(app); setOpen(false) }}><span>{app.icon}</span><strong>{app.label}</strong></button>)}</div>
+      {!apps.length && <p className="shell-search-empty">一致するアプリはありません</p>}
+      <button type="button" className="ubuntu-menu__logout" onClick={onSession}><IconPower className="shell-icon shell-icon--small" />ログアウト / Linux切替</button>
+    </section></div>}
+    <nav className="ubuntu-dock"><button type="button" className="ubuntu-dock__activities" onClick={() => setOpen((value) => !value)} title="アプリを検索"><IconSearch className="shell-icon" /></button>{LAUNCHER_APPS.map((app) => <AppButton key={app.id} app={app} />)}<span className="ubuntu-dock__spacer" /><button type="button" onClick={onSession} title="ログアウト"><IconPower className="shell-icon" /></button></nav>
   </>
 }
 
 function MintPanel({ onSession }: { onSession: () => void }) {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const apps = useMemo(() => filterApps(query), [query])
   return <div className="mint-panel-shell">
-    {open && <section className="mint-menu"><div className="mint-menu__search">アプリケーション</div><div className="mint-menu__body"><aside>{LAUNCHER_APPS.map((app) => <AppButton key={app.id} app={app} onOpen={() => setOpen(false)} />)}<button type="button" onClick={onSession}><IconPower className="shell-icon" /></button></aside><div className="mint-menu__apps">{LAUNCHER_APPS.map((app) => <button key={app.id} type="button" onClick={() => { openDesktopApp(app); setOpen(false) }}><span className="mint-menu__app-icon">{app.icon}</span><span>{app.label}</span></button>)}</div></div></section>}
+    {open && <section className="mint-menu">
+      <div className="mint-menu__search"><SearchBox value={query} onChange={setQuery} /></div>
+      <div className="mint-menu__body"><aside>{LAUNCHER_APPS.map((app) => <AppButton key={app.id} app={app} onOpen={() => setOpen(false)} />)}<button type="button" onClick={onSession} title="ログアウト"><IconPower className="shell-icon" /></button></aside><div className="mint-menu__apps">{apps.map((app) => <button key={app.id} type="button" onClick={() => { openDesktopApp(app); setOpen(false) }}><span className="mint-menu__app-icon">{app.icon}</span><span>{app.label}</span></button>)}{!apps.length && <p className="shell-search-empty">一致するアプリはありません</p>}</div></div>
+    </section>}
     <nav className="mint-panel"><button type="button" className={`mint-menu-button ${open ? 'is-open' : ''}`} onClick={() => setOpen((value) => !value)}><span>LM</span><span>メニュー</span></button>{LAUNCHER_APPS.slice(0, 4).map((app) => <AppButton key={app.id} app={app} />)}<span className="mint-panel__space" /><span className="mint-panel__clock">NEXUS</span></nav>
   </div>
 }
