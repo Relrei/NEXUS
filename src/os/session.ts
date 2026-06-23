@@ -1,4 +1,4 @@
-export type DistroId = 'arch-hyprland' | 'ubuntu-gnome' | 'fedora-gnome' | 'mint-cinnamon'
+export type DistroId = 'arch-hyprland' | 'ubuntu-gnome' | 'mint-cinnamon'
 
 export type DistroProfile = {
   id: DistroId
@@ -18,7 +18,7 @@ export const DISTRO_PROFILES: readonly DistroProfile[] = [
     edition: 'JaKooLit style',
     shell: 'Hyprland',
     icon: '▲',
-    description: 'タイル操作とWaybarを中心にしたNEXUSの標準環境。',
+    description: 'WaybarとRofiを中心にしたJaKooLit風のHyprland環境。',
     className: 'arch',
     accent: '#7dd3fc',
   },
@@ -28,19 +28,9 @@ export const DISTRO_PROFILES: readonly DistroProfile[] = [
     edition: 'Desktop',
     shell: 'GNOME',
     icon: '●',
-    description: 'アクティビティとドックを中心にしたGNOME系の操作。',
+    description: '左ドックとアクティビティを中心にしたUbuntu GNOME環境。',
     className: 'ubuntu',
     accent: '#f97316',
-  },
-  {
-    id: 'fedora-gnome',
-    name: 'Fedora',
-    edition: 'Workstation',
-    shell: 'GNOME',
-    icon: 'f',
-    description: '素のGNOMEに近い、整理されたワークスペース中心の環境。',
-    className: 'fedora',
-    accent: '#60a5fa',
   },
   {
     id: 'mint-cinnamon',
@@ -48,7 +38,7 @@ export const DISTRO_PROFILES: readonly DistroProfile[] = [
     edition: 'Cinnamon',
     shell: 'Cinnamon',
     icon: 'LM',
-    description: '従来型デスクトップに近く、初めてでも扱いやすい環境。',
+    description: '下部パネルと左下メニューを中心にしたCinnamon環境。',
     className: 'mint',
     accent: '#86efac',
   },
@@ -64,6 +54,10 @@ export function isDistroId(value: string | null): value is DistroId {
 
 export function getActiveDistro(): DistroId {
   const saved = localStorage.getItem(ACTIVE_KEY)
+  if (saved === 'fedora-gnome') {
+    localStorage.setItem(ACTIVE_KEY, 'arch-hyprland')
+    return 'arch-hyprland'
+  }
   return isDistroId(saved) ? saved : 'arch-hyprland'
 }
 
