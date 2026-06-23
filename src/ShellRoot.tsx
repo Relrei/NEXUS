@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import App from './App.tsx'
+import './session.css'
 import {
   DISTRO_PROFILES,
   getActiveDistro,
