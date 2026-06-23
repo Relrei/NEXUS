@@ -20,8 +20,12 @@ export function LockScreen({ wallpaper, onUnlock }: { wallpaper?: string; onUnlo
     }
   }
 
+  function changeSession() {
+    window.dispatchEvent(new CustomEvent('nexus:logout'))
+  }
+
   return (
-    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center">
+    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center px-4">
       {wallpaper ? (
         <div className="absolute inset-0 scale-110 bg-cover bg-center blur-xl" style={{ backgroundImage: `url(${wallpaper})` }} />
       ) : (
@@ -29,8 +33,8 @@ export function LockScreen({ wallpaper, onUnlock }: { wallpaper?: string; onUnlo
       )}
       <div className="absolute inset-0 bg-neutral-950/40" />
 
-      <div className="relative z-10 mb-10 text-center">
-        <div className="text-7xl font-light tracking-tight text-white tabular-nums drop-shadow">
+      <div className="relative z-10 mb-8 text-center sm:mb-10">
+        <div className="text-5xl font-light tracking-tight text-white tabular-nums drop-shadow sm:text-7xl">
           {`${p2(now.getHours())}:${p2(now.getMinutes())}`}
         </div>
         <div className="mt-1 text-sm text-neutral-300">
@@ -38,7 +42,7 @@ export function LockScreen({ wallpaper, onUnlock }: { wallpaper?: string; onUnlo
         </div>
       </div>
 
-      <div className="glass relative z-10 w-72 rounded-2xl p-6 text-center">
+      <div className="glass relative z-10 w-full max-w-72 rounded-2xl p-6 text-center">
         <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-white/15 text-2xl">🙂</div>
         <div className="mb-4 text-sm text-neutral-100">user</div>
         {saved ? (
@@ -59,8 +63,11 @@ export function LockScreen({ wallpaper, onUnlock }: { wallpaper?: string; onUnlo
         ) : (
           <p className="mb-3 text-[11px] text-neutral-400">パスワード未設定（誰でも解除できます）</p>
         )}
-        <button onClick={unlock} className="glass-pill w-full rounded-full py-2 text-sm text-white hover:bg-white/15">
+        <button onClick={unlock} className="glass-pill min-h-11 w-full rounded-full py-2 text-sm text-white hover:bg-white/15">
           ロック解除
+        </button>
+        <button onClick={changeSession} className="mt-2 min-h-11 w-full rounded-full py-2 text-xs text-neutral-300 hover:bg-white/10">
+          ログアウト / Linux環境を切り替える
         </button>
       </div>
     </div>
